@@ -29,49 +29,55 @@ Expected results are taken from the OpenAPI schema (`openapi.json`), not from th
 
 | ID | Area | Test case | Technique | Data | Expected | Actual | Result |
 |---|---|---|---|---|---|---|---|
-| P-15 | Pet validation | Create a pet without the name field (`POST /pet`) | required field | {"id": 5002, "photoUrls": []} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-| P-16 | Pet validation | Create a pet without the photoUrls field (`POST /pet`) | required field | {"id": 5003, "name": "Bruno"} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-| P-17 | Pet validation | Create a pet with a number as name (`POST /pet`) | wrong type | {"id": 5004, "name": 123, "photoUrls": []} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-| P-18 | Pet validation | Create a pet with a number in photoUrls (`POST /pet`) | wrong type | {"id": 5005, "name": "Bruno", "photoUrls": [123]} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-| P-19 | Pet validation | Get a pet with a letter in the id (`GET /pet/{petId}`) | wrong type | id 1234g567 | 400 Invalid ID supplied | | |
-| P-20 | Pet validation | Get a pet with a decimal id (`GET /pet/{petId}`) | wrong type | id 1234.567 | 400 Invalid ID supplied | | |
-| P-21 | Pet validation | Create a pet with status not in the enum (`POST /pet`) | equivalence classes, negative | {"id": 5006, "name": "Bruno", "photoUrls": [], "status": "lost"} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-| P-22 | Pet validation | Create a pet without id (`POST /pet`) | optional field | {"name": "Bruno", "photoUrls": []} | 200, pet is created with an id assigned by the server | | |
-| P-23 | Pet validation | Create a pet with a body that is not JSON (`POST /pet`) | wrong structure | abc | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | | |
-
+| P-15 | Pet validation | Create a pet without the name field (`POST /pet`) | required field | {"id": 5002, "photoUrls": []} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 200, pet 5002 is created without name | BUG |
+| P-16 | Pet validation | Create a pet without the photoUrls field (`POST /pet`) | required field | {"id": 5003, "name": "Bruno"} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 200, pet 5003 is created without photoUrls (empty list in response) | BUG |
+| P-17 | Pet validation | Create a pet with a number as name (`POST /pet`) | wrong type | {"id": 5004, "name": 123, "photoUrls": []} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 200, pet 5004 is created, name stored as string "123" | BUG |
+| P-18 | Pet validation | Create a pet with a number in photoUrls (`POST /pet`) | wrong type | {"id": 5005, "name": "Bruno", "photoUrls": [123]} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 200, pet 5005 is created, photoUrl stored as string "123" | BUG |
+| P-19 | Pet validation | Get a pet with a letter in the id (`GET /pet/{petId}`) | wrong type | id 1234g567 | 400 Invalid ID supplied | 404, message exposes java.lang.NumberFormatException: For input string: "1234g567" | BUG |
+| P-20 | Pet validation | Get a pet with a decimal id (`GET /pet/{petId}`) | wrong type | id 1234.567 | 400 Invalid ID supplied | 404, message exposes java.lang.NumberFormatException: For input string: "1234.567" | BUG |
+| P-21 | Pet validation | Create a pet with status not in the enum (`POST /pet`) | equivalence classes, negative | {"id": 5006, "name": "Bruno", "photoUrls": [], "status": "lost"} | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 200, pet 5006 is created with status "lost" | BUG |
+| P-22 | Pet validation | Create a pet without id (`POST /pet`) | optional field | {"name": "Bruno", "photoUrls": []} | 200, pet is created with an id assigned by the server | 200, pet is created with id 9223372016900024778 | pass |
+| P-23 | Pet validation | Create a pet with a body that is not JSON (`POST /pet`) | wrong structure | abc | 400 or 405 (error; schema documents 405 Invalid input for POST /pet) | 400, message "bad input" | pass |
 
 ## Store (orders)
 
 | ID | Area | Test case | Technique | Data | Expected | Actual | Result |
 |---|---|---|---|---|---|---|---|
-| S-01 | Store | Create a valid order (`POST /store/order`) | positive | {"id": 5001, "petId": 1, "quantity": 7} | 200, body echoes the order | | |
-| S-02 | Store | Get the created order (`GET /store/order/{orderId}`) | lifecycle | orderId 5001 | 200, body has the same id and petId | | |
-| S-03 | Store | Delete the order (`DELETE /store/order/{orderId}`) | lifecycle | orderId 5001 | 200 (success not documented, schema lists only 400, 404) | | |
-| S-04 | Store | Get the deleted order (`GET /store/order/{orderId}`) | lifecycle | orderId 5001 | 404 Order not found | | |
-| S-05 | Store | Delete the already deleted order (`DELETE /store/order/{orderId}`) | lifecycle | orderId 5001 | 404 Order not found | | |
-| S-06 | Store | Create an order with a negative quantity (`POST /store/order`) | boundary values | {"id": 5002, "petId": 1, "quantity": -7} | 200 per schema (no minimum for quantity); business rule unclear | | |
-| S-07 | Store | Create an order for a non-existent pet (`POST /store/order`) | negative | {"id": 5003, "petId": 198772, "quantity": 7} | Not defined in schema; by business logic an error is expected | | |
-| S-08 | Store | Get an order that never existed (`GET /store/order/{orderId}`) | negative | orderId 999999 | 404 Order not found | | |
-| S-09 | Store | Get the store inventory (`GET /store/inventory`) | positive | no parameters | 200, body is a map of status → count | | |
+| S-01 | Store | Create a valid order (`POST /store/order`) | positive | {"id": 5001, "petId": 1, "quantity": 7} | 200, body echoes the order | 200, body echoes the order | pass |
+| S-02 | Store | Get the created order (`GET /store/order/{orderId}`) | lifecycle | orderId 5001 | 200, body has the same id and petId | 200, same id and petId | pass |
+| S-03 | Store | Delete the order (`DELETE /store/order/{orderId}`) | lifecycle | orderId 5001 | 200 (success not documented, schema lists only 400, 404) | 200, message "5001" | question |
+| S-04 | Store | Get the deleted order (`GET /store/order/{orderId}`) | lifecycle | orderId 5001 | 404 Order not found | 404 Order not found | pass |
+| S-05 | Store | Delete the already deleted order (`DELETE /store/order/{orderId}`) | lifecycle | orderId 5001 | 404 Order not found | 404 Order not found | pass |
+| S-06 | Store | Create an order with a negative quantity (`POST /store/order`) | boundary values | {"id": 5002, "petId": 1, "quantity": -7} | 200 per schema (no minimum for quantity); business rule unclear | 200, order is created with quantity -7 | question |
+| S-07 | Store | Create an order for a non-existent pet (`POST /store/order`) | negative | {"id": 5003, "petId": 198772, "quantity": 7} | Not defined in schema; by business logic an error is expected | 200, order is created for non-existent pet 198772 | question |
+| S-08 | Store | Get an order that never existed (`GET /store/order/{orderId}`) | negative | orderId 999999 | 404 Order not found | 404 Order not found | pass |
+| S-09 | Store | Get the store inventory (`GET /store/inventory`) | positive | no parameters | 200, body is a map of status → count | 200, map of status → count; contains statuses not in the enum ("string", "lost") | pass |
 
 ## User
 
 | ID | Area | Test case | Technique | Data | Expected | Actual | Result |
 |---|---|---|---|---|---|---|---|
-| U-01 | User | Create a valid user (`POST /user`) | positive | {"id": 5001, "username": "katya_test", "firstName": "Kate", "password": "123"} | 200, body echoes the user | | |
-| U-02 | User | Get the created user (`GET /user/{username}`) | lifecycle | username katya_test | 200, body has the same username | | |
-| U-03 | User | Update the user first name (`PUT /user/{username}`) | lifecycle | username katya_test, body {"id": 5001, "username": "katya_test", "firstName": "Katya", "password": "123"} | 200, firstName is Katya | | |
-| U-04 | User | Log in with a valid username and password (`GET /user/login`) | positive | username=katya_test&password=123 | 200 | | |
-| U-05 | User | Log in with a wrong password (`GET /user/login`) | negative | username=katya_test&password=qwerty | 400 Invalid username/password supplied | | |
-| U-06 | User | Log in without parameters (`GET /user/login`) | negative | no parameters | 400 Invalid username/password supplied | | |
-| U-07 | User | Log in with empty parameters (`GET /user/login`) | negative | username=&password= | 400 Invalid username/password supplied | | |
-| U-08 | User | Delete the user (`DELETE /user/{username}`) | lifecycle | username katya_test | 200 (success not documented in schema) | | |
-| U-09 | User | Get the deleted user (`GET /user/{username}`) | lifecycle | username katya_test | 404 User not found | | |
-| U-10 | User | Delete the already deleted user (`DELETE /user/{username}`) | lifecycle | username katya_test | 404 User not found | | |
+| U-01 | User | Create a valid user (`POST /user`) | positive | {"id": 5001, "username": "katya_test", "firstName": "Kate", "password": "123"} | 200 (schema documents only default "successful operation") | 200, message "5001" | pass |
+| U-02 | User | Get the created user (`GET /user/{username}`) | lifecycle | username katya_test | 200, body has the same username | 200, same username | pass |
+| U-03 | User | Update the user first name (`PUT /user/{username}`) | lifecycle | username katya_test, body {"id": 5001, "username": "katya_test", "firstName": "Katya", "password": "123"} | 200, firstName is Katya | 200, GET shows firstName Katya | pass |
+| U-04 | User | Log in with a valid username and password (`GET /user/login`) | positive | username=katya_test&password=123 | 200 | 200, "logged in user session" | pass |
+| U-05 | User | Log in with a wrong password (`GET /user/login`) | negative | username=katya_test&password=qwerty | 400 Invalid username/password supplied | 200, "logged in user session" | BUG |
+| U-06 | User | Log in without parameters (`GET /user/login`) | negative | no parameters | 400 Invalid username/password supplied | 200, "logged in user session" | BUG |
+| U-07 | User | Log in with empty parameters (`GET /user/login`) | negative | username=&password= | 400 Invalid username/password supplied | 200, "logged in user session" | BUG |
+| U-08 | User | Delete the user (`DELETE /user/{username}`) | lifecycle | username katya_test | 200 (success not documented, schema lists only 400, 404) | 200 | question |
+| U-09 | User | Get the deleted user (`GET /user/{username}`) | lifecycle | username katya_test | 404 User not found | 404 User not found | pass |
+| U-10 | User | Delete the already deleted user (`DELETE /user/{username}`) | lifecycle | username katya_test | 404 User not found | 404 | pass |
+| U-11 | User | Get user does not expose the password (`GET /user/{username}`) | security | username katya_test | password is not returned (schema lists password in User, so formally allowed) | 200, password "123" returned in plain text | question |
 
 ## Out of scope
+- Image upload (`POST /pet/{petId}/uploadImage`): file handling is not part of this plan.
+- Performance and load testing.
+- Authentication and security beyond the login cases above.
+- `POST /user/createWithList`, `GET /user/logout`.
 
 ## Questions for the analyst
-- POST /pet documents 405 Invalid input for invalid data. Should it be 400? 
-- Can an order have quantity 0 or less? The schema has no minimum.
-- Must `petId` in an order refer to an existing pet?
+- `POST /pet` documents 405 Invalid input for invalid data. Should it be 400?
+- Successful responses are missing in the schema for `DELETE /pet/{petId}` (also 404), `DELETE /store/order/{orderId}`, `DELETE /user/{username}` and `POST /pet/{petId}` (documents only 405). Should they be added? (P-04, P-07, P-08, S-03, U-08)
+- Can an order have quantity 0 or less? The schema has no minimum. (S-06)
+- Must `petId` in an order refer to an existing pet? (S-07)
+- `GET /user/{username}` returns the password in plain text. Should the password be excluded from responses? (U-11)
